@@ -11,9 +11,6 @@
   actionable health reports.
 </p>
 
-<p align="center">
-  <img src="assets/logo.svg" alt="RepoLens logo" width="100" />
-</p>
 
 ---
 
