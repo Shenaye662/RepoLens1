@@ -1,0 +1,839 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="description"
+          content="RepoLens — Analyze repository structure, documentation, configuration, and publishing readiness.">
+
+    <meta name="theme-color" content="#0b0d14">
+
+    <title>RepoLens — Repository Intelligence</title>
+
+    <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- ZIP archive support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+            defer></script>
+
+    <!-- Application modules -->
+    <script src="js/scanner.js" defer></script>
+    <script src="js/scoring.js" defer></script>
+    <script src="js/reports.js" defer></script>
+    <script src="js/app.js" defer></script>
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <!-- =========================================
+             SIDEBAR
+        ========================================== -->
+        <aside class="sidebar" id="sidebar">
+
+            <a href="#overview" class="brand" aria-label="RepoLens home">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 48 48" fill="none">
+                        <rect x="3" y="3" width="42" height="42" rx="13"
+                              fill="currentColor" opacity=".15"/>
+                        <path d="M10 15h12l4 5h12v15H10V15Z"
+                              stroke="currentColor" stroke-width="2.5"
+                              stroke-linejoin="round"/>
+                        <circle cx="29" cy="27" r="5"
+                                stroke="currentColor" stroke-width="2.5"/>
+                        <path d="m33 31 4 4"
+                              stroke="currentColor" stroke-width="2.5"
+                              stroke-linecap="round"/>
+                    </svg>
+                </span>
+
+                <span class="brand-copy">
+                    <strong>RepoLens</strong>
+                    <small>REPOSITORY INTELLIGENCE</small>
+                </span>
+            </a>
+
+            <div class="sidebar-section-label">WORKSPACE</div>
+
+            <nav class="main-nav" aria-label="Main navigation">
+                <a class="nav-link active" href="#overview">
+                    <span class="nav-icon" aria-hidden="true">◫</span>
+                    <span>Overview</span>
+                </a>
+
+                <a class="nav-link" href="#scanner">
+                    <span class="nav-icon" aria-hidden="true">⌕</span>
+                    <span>Repository scanner</span>
+                </a>
+
+                <a class="nav-link" href="#findings">
+                    <span class="nav-icon" aria-hidden="true">≡</span>
+                    <span>Audit findings</span>
+                    <span class="nav-count" id="findingNavCount">0</span>
+                </a>
+
+                <a class="nav-link" href="#reports">
+                    <span class="nav-icon" aria-hidden="true">↗</span>
+                    <span>Reports</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-section-label">INFORMATION</div>
+
+            <nav class="main-nav" aria-label="Information navigation">
+                <a class="nav-link" href="#methodology">
+                    <span class="nav-icon" aria-hidden="true">ⓘ</span>
+                    <span>Scoring methodology</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-spacer"></div>
+
+            <section class="sidebar-status" aria-label="Application status">
+                <span class="status-indicator"></span>
+                <div>
+                    <strong>Local analysis mode</strong>
+                    <small>Your selected files are analyzed in your browser.</small>
+                </div>
+            </section>
+
+            <div class="sidebar-footer">
+                <span class="footer-logo">RL</span>
+                <div>
+                    <strong>RepoLens</strong>
+                    <small>Repository audit toolkit</small>
+                </div>
+                <span class="version-label">1.0.0</span>
+            </div>
+        </aside>
+
+
+        <!-- =========================================
+             MAIN APPLICATION
+        ========================================== -->
+        <main class="main-content" id="mainContent">
+
+            <!-- TOP BAR -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="icon-button mobile-menu-button"
+                            id="menuToggle"
+                            type="button"
+                            aria-label="Toggle navigation"
+                            aria-expanded="false">
+                        ☰
+                    </button>
+
+                    <div class="breadcrumb">
+                        <span>Workspace</span>
+                        <span class="breadcrumb-separator">/</span>
+                        <strong id="breadcrumbCurrent">Overview</strong>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <span class="environment-badge">
+                        <span class="status-indicator"></span>
+                        Browser-based
+                    </span>
+
+                    <button class="icon-button"
+                            id="helpButton"
+                            type="button"
+                            aria-label="Help"
+                            title="How RepoLens works">
+                        ?
+                    </button>
+
+                    <div class="user-avatar" aria-label="Local workspace">
+                        RL
+                    </div>
+                </div>
+            </header>
+
+
+            <!-- CONTENT AREA -->
+            <div class="page-content">
+
+                <!-- PAGE INTRODUCTION -->
+                <section class="page-heading" id="overview">
+                    <div>
+                        <div class="eyebrow">
+                            <span class="eyebrow-line"></span>
+                            DEVELOPER TOOLKIT
+                        </div>
+
+                        <h1>Repository overview<span class="heading-period">.</span></h1>
+
+                        <p class="page-subtitle">
+                            Understand your project's health, uncover missing
+                            essentials, and prepare your repository for publication.
+                        </p>
+                    </div>
+
+                    <div class="heading-actions">
+                        <button class="button button-secondary"
+                                id="clearButton"
+                                type="button">
+                            <span aria-hidden="true">↺</span>
+                            Reset audit
+                        </button>
+
+                        <button class="button button-primary"
+                                id="newScanButton"
+                                type="button">
+                            <span aria-hidden="true">＋</span>
+                            New audit
+                        </button>
+                    </div>
+                </section>
+
+
+                <!-- =====================================
+                     REPOSITORY UPLOAD
+                ====================================== -->
+                <section class="panel scanner-panel" id="scanner">
+
+                    <div class="panel-heading">
+                        <div class="panel-heading-copy">
+                            <div class="section-icon purple-icon" aria-hidden="true">
+                                ↥
+                            </div>
+
+                            <div>
+                                <h2>Analyze a repository</h2>
+                                <p>
+                                    Select project files or upload a ZIP archive
+                                    to start an audit.
+                                </p>
+                            </div>
+                        </div>
+
+                        <span class="optional-label">NO ACCOUNT REQUIRED</span>
+                    </div>
+
+                    <div class="upload-zone"
+                         id="dropZone"
+                         tabindex="0"
+                         role="button"
+                         aria-label="Choose project files or upload a ZIP archive">
+
+                        <input type="file"
+                               id="fileInput"
+                               accept=".zip"
+                               hidden>
+
+                        <input type="file"
+                               id="folderInput"
+                               webkitdirectory
+                               directory
+                               multiple
+                               hidden>
+
+                        <div class="upload-illustration" aria-hidden="true">
+                            <svg viewBox="0 0 64 64" fill="none">
+                                <path d="M12 18a5 5 0 0 1 5-5h12l6 7h12a5 5 0 0 1 5 5v20a5 5 0 0 1-5 5H17a5 5 0 0 1-5-5V18Z"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                      stroke-linejoin="round"/>
+
+                                <path d="M32 41V27m0 0-6 6m6-6 6 6"
+                                      stroke="currentColor"
+                                      stroke-width="2.5"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+
+                        <h3>Drop your project here</h3>
+
+                        <p class="upload-description">
+                            Drag and drop a ZIP archive, or choose a project
+                            from your computer.
+                        </p>
+
+                        <div class="upload-actions">
+                            <button class="button button-primary"
+                                    id="browseZipButton"
+                                    type="button">
+                                Browse ZIP archive
+                            </button>
+
+                            <button class="button button-secondary"
+                                    id="browseFolderButton"
+                                    type="button">
+                                Select project folder
+                            </button>
+                        </div>
+
+                        <p class="upload-support">
+                            ZIP archives and browser-supported folder selection
+                            <span aria-hidden="true">·</span>
+                            Maximum archive size: 25 MB
+                        </p>
+                    </div>
+
+                    <div class="scan-progress" id="scanProgress" hidden>
+                        <div class="progress-heading">
+                            <span id="progressLabel">Preparing repository...</span>
+                            <span id="progressPercentage">0%</span>
+                        </div>
+
+                        <div class="progress-track"
+                             role="progressbar"
+                             aria-label="Repository scan progress"
+                             aria-valuemin="0"
+                             aria-valuemax="100"
+                             aria-valuenow="0"
+                             id="progressBar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+
+                    <div class="selected-project" id="selectedProject" hidden>
+                        <div class="project-file-icon" aria-hidden="true">▤</div>
+
+                        <div class="selected-project-info">
+                            <strong id="selectedProjectName">project.zip</strong>
+                            <span id="selectedProjectMeta">Waiting to scan</span>
+                        </div>
+
+                        <button class="button button-primary"
+                                id="runScanButton"
+                                type="button">
+                            Run audit
+                        </button>
+                    </div>
+
+                    <div class="message-area"
+                         id="messageArea"
+                         role="status"
+                         aria-live="polite"
+                         hidden>
+                    </div>
+                </section>
+
+
+                <!-- =====================================
+                     METRIC CARDS
+                ====================================== -->
+                <section class="metrics-grid" aria-label="Audit metrics">
+
+                    <article class="metric-card score-card">
+                        <div class="metric-top">
+                            <span class="metric-label">Repository health</span>
+                            <span class="metric-symbol purple-symbol" aria-hidden="true">◉</span>
+                        </div>
+
+                        <div class="metric-value-row">
+                            <strong class="metric-value" id="healthScore">—</strong>
+                            <span class="metric-unit">/100</span>
+                        </div>
+
+                        <div class="metric-progress-track">
+                            <div class="metric-progress-fill"
+                                 id="healthProgress"
+                                 style="width: 0%">
+                            </div>
+                        </div>
+
+                        <p class="metric-footnote" id="healthLabel">
+                            Run an audit to calculate health
+                        </p>
+                    </article>
+
+
+                    <article class="metric-card">
+                        <div class="metric-top">
+                            <span class="metric-label">Checks passed</span>
+                            <span class="metric-symbol green-symbol" aria-hidden="true">✓</span>
+                        </div>
+
+                        <div class="metric-value-row">
+                            <strong class="metric-value" id="passedChecks">—</strong>
+                        </div>
+
+                        <p class="metric-footnote">
+                            <span class="metric-dot green-dot"></span>
+                            <span id="passedDescription">Awaiting analysis</span>
+                        </p>
+                    </article>
+
+
+                    <article class="metric-card">
+                        <div class="metric-top">
+                            <span class="metric-label">Warnings</span>
+                            <span class="metric-symbol amber-symbol" aria-hidden="true">!</span>
+                        </div>
+
+                        <div class="metric-value-row">
+                            <strong class="metric-value" id="warningCount">—</strong>
+                        </div>
+
+                        <p class="metric-footnote">
+                            <span class="metric-dot amber-dot"></span>
+                            <span id="warningDescription">Awaiting analysis</span>
+                        </p>
+                    </article>
+
+
+                    <article class="metric-card">
+                        <div class="metric-top">
+                            <span class="metric-label">Critical issues</span>
+                            <span class="metric-symbol red-symbol" aria-hidden="true">×</span>
+                        </div>
+
+                        <div class="metric-value-row">
+                            <strong class="metric-value" id="criticalCount">—</strong>
+                        </div>
+
+                        <p class="metric-footnote">
+                            <span class="metric-dot red-dot"></span>
+                            <span id="criticalDescription">Awaiting analysis</span>
+                        </p>
+                    </article>
+
+                </section>
+
+
+                <!-- =====================================
+                     AUDIT RESULTS
+                ====================================== -->
+                <section class="results-grid" id="findings">
+
+                    <!-- FINDINGS TABLE -->
+                    <section class="panel findings-panel">
+
+                        <div class="panel-heading findings-heading">
+                            <div>
+                                <h2>Audit findings</h2>
+                                <p id="findingsSubtitle">
+                                    Your repository checks will appear here.
+                                </p>
+                            </div>
+
+                            <button class="text-button"
+                                    id="clearFiltersButton"
+                                    type="button">
+                                Clear filters
+                            </button>
+                        </div>
+
+                        <div class="filter-toolbar">
+                            <div class="search-field">
+                                <span aria-hidden="true">⌕</span>
+
+                                <input type="search"
+                                       id="findingSearch"
+                                       placeholder="Search findings..."
+                                       aria-label="Search audit findings">
+                            </div>
+
+                            <select id="severityFilter"
+                                    aria-label="Filter by severity">
+                                <option value="all">All severities</option>
+                                <option value="critical">Critical</option>
+                                <option value="warning">Warning</option>
+                                <option value="passed">Passed</option>
+                                <option value="info">Information</option>
+                            </select>
+
+                            <select id="categoryFilter"
+                                    aria-label="Filter by category">
+                                <option value="all">All categories</option>
+                                <option value="documentation">Documentation</option>
+                                <option value="configuration">Configuration</option>
+                                <option value="structure">Structure</option>
+                                <option value="security">Security</option>
+                                <option value="publishing">Publishing</option>
+                            </select>
+                        </div>
+
+                        <div class="findings-summary">
+                            <span id="findingsCount">0 findings</span>
+                            <span>Sorted by severity</span>
+                        </div>
+
+                        <div class="findings-list"
+                             id="findingsList"
+                             aria-live="polite">
+
+                            <div class="empty-state" id="emptyFindings">
+                                <div class="empty-state-icon" aria-hidden="true">
+                                    ⌕
+                                </div>
+
+                                <h3>No audit results yet</h3>
+
+                                <p>
+                                    Upload a repository and run an audit to
+                                    discover issues and improvement opportunities.
+                                </p>
+
+                                <button class="button button-secondary"
+                                        id="emptyStateScanButton"
+                                        type="button">
+                                    Select a repository
+                                </button>
+                            </div>
+
+                        </div>
+
+                        <div class="panel-footer">
+                            <span id="resultsFooter">
+                                No repository analyzed
+                            </span>
+
+                            <button class="text-button"
+                                    id="exportFindingsButton"
+                                    type="button"
+                                    disabled>
+                                Export findings ↗
+                            </button>
+                        </div>
+                    </section>
+
+
+                    <!-- RIGHT COLUMN -->
+                    <div class="right-column">
+
+                        <!-- REPOSITORY DETAILS -->
+                        <section class="panel repository-panel">
+
+                            <div class="panel-heading">
+                                <div>
+                                    <h2>Repository details</h2>
+                                    <p>Current audit target</p>
+                                </div>
+
+                                <span class="panel-icon" aria-hidden="true">▤</span>
+                            </div>
+
+                            <div class="repository-identity">
+                                <div class="repository-avatar" aria-hidden="true">
+                                    &lt;/&gt;
+                                </div>
+
+                                <div class="repository-name-wrap">
+                                    <strong id="repositoryName">No repository</strong>
+                                    <span id="repositoryType">Waiting for upload</span>
+                                </div>
+                            </div>
+
+                            <div class="detail-list">
+                                <div class="detail-row">
+                                    <span>Files detected</span>
+                                    <strong id="fileCount">—</strong>
+                                </div>
+
+                                <div class="detail-row">
+                                    <span>Project size</span>
+                                    <strong id="projectSize">—</strong>
+                                </div>
+
+                                <div class="detail-row">
+                                    <span>Documentation</span>
+                                    <strong id="documentationStatus">—</strong>
+                                </div>
+
+                                <div class="detail-row">
+                                    <span>Configuration</span>
+                                    <strong id="configurationStatus">—</strong>
+                                </div>
+
+                                <div class="detail-row">
+                                    <span>Last audited</span>
+                                    <strong id="lastAudited">—</strong>
+                                </div>
+                            </div>
+
+                            <button class="button button-secondary button-full"
+                                    id="rescanButton"
+                                    type="button">
+                                ↻ &nbsp; Scan another repository
+                            </button>
+                        </section>
+
+
+                        <!-- RECOMMENDATIONS -->
+                        <section class="panel recommendations-panel">
+
+                            <div class="panel-heading">
+                                <div>
+                                    <h2>Recommended actions</h2>
+                                    <p>Improve your repository quality</p>
+                                </div>
+
+                                <span class="panel-icon" aria-hidden="true">✧</span>
+                            </div>
+
+                            <div class="recommendation-list"
+                                 id="recommendationList">
+
+                                <div class="recommendation-placeholder">
+                                    <span class="recommendation-number">01</span>
+
+                                    <div>
+                                        <strong>Document your project</strong>
+                                        <p>
+                                            Add a README explaining the purpose,
+                                            installation and usage.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="recommendation-placeholder">
+                                    <span class="recommendation-number">02</span>
+
+                                    <div>
+                                        <strong>Review repository settings</strong>
+                                        <p>
+                                            Check your configuration and exclude
+                                            unnecessary generated files.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="recommendation-placeholder">
+                                    <span class="recommendation-number">03</span>
+
+                                    <div>
+                                        <strong>Prepare for publication</strong>
+                                        <p>
+                                            Review licensing and deployment
+                                            requirements before publishing.
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                    </div>
+                </section>
+
+
+                <!-- =====================================
+                     REPORT EXPORTS
+                ====================================== -->
+                <section class="panel reports-panel" id="reports">
+
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Export audit report</h2>
+                            <p>
+                                Save your findings for documentation, review
+                                or future reference.
+                            </p>
+                        </div>
+
+                        <span class="panel-icon" aria-hidden="true">⇩</span>
+                    </div>
+
+                    <div class="export-grid">
+
+                        <article class="export-card">
+                            <div class="export-icon json-icon" aria-hidden="true">
+                                { }
+                            </div>
+
+                            <div class="export-copy">
+                                <h3>JSON report</h3>
+                                <p>
+                                    Structured audit data for developers
+                                    and automated workflows.
+                                </p>
+                            </div>
+
+                            <button class="button button-secondary"
+                                    id="exportJsonButton"
+                                    type="button"
+                                    disabled>
+                                Export JSON
+                            </button>
+                        </article>
+
+
+                        <article class="export-card">
+                            <div class="export-icon csv-icon" aria-hidden="true">
+                                ▦
+                            </div>
+
+                            <div class="export-copy">
+                                <h3>CSV spreadsheet</h3>
+                                <p>
+                                    Findings formatted for spreadsheet
+                                    applications and analysis.
+                                </p>
+                            </div>
+
+                            <button class="button button-secondary"
+                                    id="exportCsvButton"
+                                    type="button"
+                                    disabled>
+                                Export CSV
+                            </button>
+                        </article>
+
+                    </div>
+                </section>
+
+
+                <!-- =====================================
+                     SCORING METHODOLOGY
+                ====================================== -->
+                <section class="panel methodology-panel" id="methodology">
+
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Scoring methodology</h2>
+                            <p>
+                                Understand how repository health is evaluated.
+                            </p>
+                        </div>
+
+                        <span class="panel-icon" aria-hidden="true">◎</span>
+                    </div>
+
+                    <div class="methodology-grid">
+
+                        <article class="method-card">
+                            <span class="method-percentage">25%</span>
+                            <h3>Documentation</h3>
+                            <p>
+                                README presence, project explanation
+                                and supporting documentation.
+                            </p>
+                        </article>
+
+                        <article class="method-card">
+                            <span class="method-percentage">25%</span>
+                            <h3>Configuration</h3>
+                            <p>
+                                Relevant ignore rules, project manifests
+                                and configuration files.
+                            </p>
+                        </article>
+
+                        <article class="method-card">
+                            <span class="method-percentage">25%</span>
+                            <h3>Structure</h3>
+                            <p>
+                                Source organisation, logical folders
+                                and common project conventions.
+                            </p>
+                        </article>
+
+                        <article class="method-card">
+                            <span class="method-percentage">25%</span>
+                            <h3>Publishing readiness</h3>
+                            <p>
+                                Licence, entry points and deployment
+                                essentials where applicable.
+                            </p>
+                        </article>
+
+                    </div>
+
+                    <p class="methodology-note">
+                        Scores are heuristic indicators, not certifications
+                        or guarantees of code quality or security. Some checks
+                        depend on the files provided and the detected project type.
+                    </p>
+                </section>
+
+
+                <!-- FOOTER -->
+                <footer class="app-footer">
+                    <div>
+                        <span class="footer-brand">RepoLens</span>
+                        <span>Repository intelligence for developers.</span>
+                    </div>
+
+                    <div class="footer-links">
+                        <a href="#overview">Back to top ↑</a>
+                        <span>Version 1.0.0</span>
+                    </div>
+                </footer>
+
+            </div>
+        </main>
+    </div>
+
+
+    <!-- =============================================
+         HELP DIALOG
+    ============================================== -->
+    <dialog class="help-dialog" id="helpDialog">
+        <div class="dialog-header">
+            <div>
+                <span class="eyebrow">REPOLENS GUIDE</span>
+                <h2>How it works</h2>
+            </div>
+
+            <button class="icon-button"
+                    id="closeHelpButton"
+                    type="button"
+                    aria-label="Close help">
+                ×
+            </button>
+        </div>
+
+        <div class="dialog-content">
+            <div class="help-step">
+                <span>01</span>
+                <div>
+                    <h3>Select your repository</h3>
+                    <p>
+                        Upload a ZIP archive or select a project folder.
+                        Only provide files you are comfortable analyzing.
+                    </p>
+                </div>
+            </div>
+
+            <div class="help-step">
+                <span>02</span>
+                <div>
+                    <h3>Run the audit</h3>
+                    <p>
+                        RepoLens checks the available file structure
+                        and evaluates supported repository conventions.
+                    </p>
+                </div>
+            </div>
+
+            <div class="help-step">
+                <span>03</span>
+                <div>
+                    <h3>Review the findings</h3>
+                    <p>
+                        Investigate missing files, warnings and
+                        recommendations, then export your report.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dialog-footer">
+            <button class="button button-primary"
+                    id="gotItButton"
+                    type="button">
+                Got it
+            </button>
+        </div>
+    </dialog>
+
+
+    <!-- Fallback announcement for application messages -->
+    <div class="toast-container"
+         id="toastContainer"
+         aria-live="polite"
+         aria-atomic="true">
+    </div>
+
+</body>
+</html>
